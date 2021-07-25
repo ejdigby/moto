@@ -580,6 +580,10 @@ class LambdaFunction(CloudFormationModel, DockerModel):
             
             print("With volume")
             with _DockerDataVolumeContext(self) as data_vol:
+
+                print("Inside, data vol:")
+                print(data_vol)
+                
                 try:
                     self.docker_client.ping()  # Verify Docker is running
                     run_kwargs = (
