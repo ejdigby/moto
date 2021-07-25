@@ -568,7 +568,7 @@ class LambdaFunction(CloudFormationModel, DockerModel):
                 "AWS_SESSION_TOKEN": "session-token",
             }
 
-            print("Updating Env Vars)
+            print("Updating Env Vars")
            
             env_vars.update(self.environment_vars)
              
