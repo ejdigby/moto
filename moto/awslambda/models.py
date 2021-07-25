@@ -541,6 +541,9 @@ class LambdaFunction(CloudFormationModel, DockerModel):
     def _invoke_lambda(self, code, event=None, context=None):
         # Create the LogGroup if necessary, to write the result to
         self.logs_backend.ensure_log_group(self.logs_group_name, [])
+        
+        print("Invoking Lambda")
+        
         # TODO: context not yet implemented
         if event is None:
             event = dict()
@@ -565,10 +568,17 @@ class LambdaFunction(CloudFormationModel, DockerModel):
                 "AWS_SESSION_TOKEN": "session-token",
             }
 
+            print("Updating Env Vars)
+           
             env_vars.update(self.environment_vars)
+             
 
             container = exit_code = None
+                 
+            print("Setting log config")
             log_config = docker.types.LogConfig(type=docker.types.LogConfig.types.JSON)
+            
+            print("With volume")
             with _DockerDataVolumeContext(self) as data_vol:
                 try:
                     self.docker_client.ping()  # Verify Docker is running
@@ -579,6 +589,9 @@ class LambdaFunction(CloudFormationModel, DockerModel):
                     )
                     image_ref = "lambci/lambda:{}".format(self.run_time)
                     self.docker_client.images.pull(":".join(parse_image_ref(image_ref)))
+                  
+                    print("Running Container")
+                    print("Volumes: %s" % "{}:/var/task".format(data_vol.name))
                     container = self.docker_client.containers.run(
                         image_ref,
                         [self.handler, json.dumps(event)],
@@ -591,6 +604,7 @@ class LambdaFunction(CloudFormationModel, DockerModel):
                         **run_kwargs
                     )
                 finally:
+                    print("In Finally")
                     if container:
                         try:
                             exit_code = container.wait(timeout=300)
@@ -601,7 +615,8 @@ class LambdaFunction(CloudFormationModel, DockerModel):
                         else:
                             if docker_3:
                                 exit_code = exit_code["StatusCode"]
-
+                        
+                        print("After status code")
                         output = container.logs(stdout=False, stderr=True)
                         output += container.logs(stdout=True, stderr=False)
                         container.remove()
