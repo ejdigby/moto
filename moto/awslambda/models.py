@@ -111,22 +111,34 @@ class _DockerDataVolumeContext:
 
     def __enter__(self):
         # See if volume is already known
+
+        print("Entering Docker Data Volume")
+
         with self.__class__._lock:
+            print("in Lock")
+
+            print("Geting ref")
             self._vol_ref = self.__class__._data_vol_map[self._lambda_func.code_sha_256]
+
+            print("Increasing Count")
             self._vol_ref.refcount += 1
             if self._vol_ref.refcount > 1:
                 return self
 
+            print("Checking if the volume already exists")
             # See if the volume already exists
             for vol in self._lambda_func.docker_client.volumes.list():
                 if vol.name == self._lambda_func.code_sha_256:
                     self._vol_ref.volume = vol
                     return self
 
+            print("Doesn't exist!")
             # It doesn't exist so we need to create it
             self._vol_ref.volume = self._lambda_func.docker_client.volumes.create(
                 self._lambda_func.code_sha_256
             )
+            
+            print("Creating volume")
             if docker_3:
                 volumes = {self.name: {"bind": "/tmp/data", "mode": "rw"}}
             else:
@@ -134,6 +146,9 @@ class _DockerDataVolumeContext:
             self._lambda_func.docker_client.images.pull(
                 ":".join(parse_image_ref("alpine"))
             )
+
+            print("Running container with volumes:")
+            print(volumes)
             container = self._lambda_func.docker_client.containers.run(
                 "alpine", "sleep 100", volumes=volumes, detach=True
             )
@@ -583,7 +598,7 @@ class LambdaFunction(CloudFormationModel, DockerModel):
 
                 print("Inside, data vol:")
                 print(data_vol)
-                
+
                 try:
                     self.docker_client.ping()  # Verify Docker is running
                     run_kwargs = (
